@@ -35,8 +35,6 @@ Teachable Machine is really good for showing or understanding the basics of neur
 3.	Predict: Incoming frames are embedded and classified, updating the UI in real time.
 
 ## Roadmap / Ideas?
-- Save & load weights (file download / localStorage)
-- Drag-and-drop image upload support
 - Evaluation tools: confusion matrix, per-class accuracy
 - Export to different formats (TF SavedModel, ONNX)
-- UI/UX polish and more responsive layout
+- ??

@@ -32,8 +32,13 @@
                     <strong>Training</strong>
                 </div>
                 <button id="train-model-button" disabled>Train Model</button>
-
+                <div id="model-management" style="margin-top: 1rem;">
+                    <button id="save-model-button" disabled>Save Model</button>
+                    <button id="load-model-button">Load Model</button>
+                    <input type="file" id="load-model-input" style="display: none;" accept=".json,.weights.bin" multiple>
+                </div>
             </div>
+            
         </div>
 
         <!-- Column 3: Output -->

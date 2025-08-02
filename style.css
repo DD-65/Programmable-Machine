@@ -101,6 +101,12 @@ body {
     padding: 16px;
     margin-bottom: 16px;
     width: 250px; /* Fixed width for cards */
+    transition: box-shadow 0.3s ease;
+}
+
+.drop-zone-active {
+    box-shadow: 0 0 15px rgba(26, 115, 232, 0.7);
+    border: 2px dashed #1A73E8;
 }
 
 .card-header {

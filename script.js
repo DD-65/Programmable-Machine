@@ -1,8 +1,10 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     const classesColumn = document.getElementById('classes-column');
     const addClassButton = document.getElementById('add-class-button');
     const trainModelButton = document.getElementById('train-model-button');
+    const saveModelButton = document.getElementById('save-model-button');
+    const loadModelButton = document.getElementById('load-model-button');
+    const loadModelInput = document.getElementById('load-model-input');
     const previewPlaceholder = document.getElementById('preview-placeholder');
     const webcamElement = document.getElementById('webcam');
     const predictionResultsElement = document.getElementById('prediction-results');
@@ -13,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let trainingData = [];
     let model;
     let mobilenet;
-    let isCapturing = false;
 
     // --- UI Management ---
 
@@ -40,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${headerIcons}
                 </div>
             </div>
-            <div class="add-image-label">Click to Record Samples</div>
+            <div class="add-image-label">Click to Record or Drop Images</div>
             <div class="action-buttons">
                 <button class="webcam-button">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.6 11.6L22 7v10l-6.4-4.6"></path><rect x="2" y="7" width="14" height="10" rx="2" ry="2"></rect></svg>
@@ -50,15 +51,18 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="image-count">0 images</div>
         `;
         classesColumn.insertBefore(card, addClassButton);
+        addDragAndDropHandlers(card);
         updateUIState();
         drawConnections();
     };
 
     const updateUIState = () => {
         const hasSamples = trainingData.length > 0;
+        const modelReady = !!model;
         trainModelButton.disabled = !hasSamples;
+        saveModelButton.disabled = !modelReady;
 
-        if (model) {
+        if (modelReady) {
             previewPlaceholder.classList.add('hidden');
             webcamElement.classList.remove('hidden');
         } else {
@@ -75,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const trainingNodeCenterY = trainingNodeRect.top + trainingNodeRect.height / 2;
         const trainingNodeX = trainingNodeRect.left;
 
-        document.querySelectorAll('.class-card').forEach((card, index) => {
+        document.querySelectorAll('.class-card').forEach((card) => {
             const cardRect = card.getBoundingClientRect();
             const cardCenterY = cardRect.top + cardRect.height / 2;
             const cardX = cardRect.right;
@@ -107,6 +111,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- Drag and Drop ---
+    const addDragAndDropHandlers = (card) => {
+        card.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            card.classList.add('drop-zone-active');
+        });
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            card.classList.add('drop-zone-active');
+        });
+        card.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            card.classList.remove('drop-zone-active');
+        });
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('drop-zone-active');
+            const classId = card.dataset.classId;
+            const files = e.dataTransfer.files;
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            addImageSample(img, classId);
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+    };
+
     // --- TensorFlow.js Logic ---
 
     async function setupWebcam() {
@@ -120,9 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function captureSamples(classId) {
+    async function addImageSample(imageElement, classId) {
         if (!mobilenet) return;
-        const image = tf.browser.fromPixels(webcamElement);
+        const image = tf.browser.fromPixels(imageElement);
         const activation = mobilenet.infer(image, 'conv_preds');
         trainingData.push({ image: activation, label: parseInt(classId) });
         image.dispose();
@@ -157,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         });
 
-        model.compile({ optimizer: tf.train.adam(0.0001), loss: 'categoricalCrossentropy' });
+        model.compile({ optimizer: tf.train.adam(0.0001), loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
 
         await model.fit(xs, ys, {
             epochs: 20,
@@ -212,12 +251,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function saveModel() {
+        if (!model) return;
+        await model.save('localstorage://my-model');
+        const json = localStorage.getItem('tensorflowjs_models/my-model/model.json');
+        const weights = localStorage.getItem('tensorflowjs_models/my-model/model.weights.bin');
+        const a = document.createElement('a');
+        const blob = new Blob([weights]);
+        a.href = URL.createObjectURL(blob);
+        a.download = 'model.weights.bin';
+        a.click();
+        const json_a = document.createElement('a');
+        const json_blob = new Blob([json]);
+        json_a.href = URL.createObjectURL(json_blob);
+        json_a.download = 'model.json';
+        json_a.click();
+    }
+
+    async function loadModel() {
+        loadModelInput.click();
+    }
+
+    async function loadModelFromFiles(files) {
+        if (!files || files.length !== 2) {
+            alert('Please select both model.json and model.weights.bin');
+            return;
+        }
+        const jsonFile = Array.from(files).find(f => f.name.endsWith('.json'));
+        const weightsFile = Array.from(files).find(f => f.name.endsWith('.weights.bin'));
+
+        if (!jsonFile || !weightsFile) {
+            alert('Please select both model.json and model.weights.bin');
+            return;
+        }
+
+        model = await tf.loadLayersModel(tf.io.browserFiles([jsonFile, weightsFile]));
+        updateUIState();
+        drawConnections();
+        predict();
+    }
+
+    async function loadModelFromLocalStorage() {
+        try {
+            const loadedModel = await tf.loadLayersModel('localstorage://my-model');
+            if (loadedModel) {
+                model = loadedModel;
+                updateUIState();
+                drawConnections();
+                predict();
+            }
+        } catch (e) {
+            console.log('No model found in local storage.');
+        }
+    }
+
     async function init() {
         try {
             await setupWebcam();
             mobilenet = await window.mobilenet.load({ version: 2, alpha: 1.0 });
-            // Directly manipulating the style is more robust
             loadingOverlay.style.display = 'none';
+            await loadModelFromLocalStorage();
         } catch (err) {
             console.error("Initialization failed:", err);
             const p = loadingOverlay.querySelector('p');
@@ -230,13 +323,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     addClassButton.addEventListener('click', createClassCard);
     trainModelButton.addEventListener('click', trainModel);
+    saveModelButton.addEventListener('click', saveModel);
+    loadModelButton.addEventListener('click', loadModel);
+    loadModelInput.addEventListener('change', (e) => loadModelFromFiles(e.target.files));
 
     classesColumn.addEventListener('click', e => {
         const webcamButton = e.target.closest('.webcam-button');
         if (webcamButton) {
             const card = e.target.closest('.class-card');
             const classId = card.dataset.classId;
-            captureSamples(classId);
+            addImageSample(webcamElement, classId);
         }
 
         const removeButton = e.target.closest('.remove-icon');
@@ -244,17 +340,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const cardToRemove = e.target.closest('.class-card');
             const classIdToRemove = parseInt(cardToRemove.dataset.classId);
 
-            // Remove samples associated with the deleted class
             trainingData = trainingData.filter(d => d.label !== classIdToRemove);
-
             cardToRemove.remove();
 
-            // Re-index class IDs and training data labels
             let newClassId = 1;
             document.querySelectorAll('.class-card').forEach(card => {
                 const oldClassId = parseInt(card.dataset.classId);
                 if (oldClassId !== newClassId) {
-                    // Update training data labels for this class
                     trainingData.forEach(d => {
                         if (d.label === oldClassId) {
                             d.label = newClassId;
@@ -265,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 newClassId++;
             });
-            classCounter = newClassId - 1; // Update classCounter to reflect current number of classes
+            classCounter = newClassId - 1;
 
             drawConnections();
             updateUIState();
