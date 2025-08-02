@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project lets you train and run a simple image classifier directly in the browser: no server, no installs. It captures examples from your webcam (or images, if you add that) and fine-tunes a lightweight head on top of pretrained embeddings.
+This project lets you train and run a simple image classifier directly in the browser: no server, no installs. It captures examples from your webcam and fine-tunes a lightweight head on top of pretrained embeddings.
 
 ## Motivation
 
