@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project lets you train and run a simple image classifier directly in the browser: no server, no installs. It captures examples from your webcam and fine-tunes a lightweight head on top of pretrained embeddings.
+This project lets you train and run a simple image classifier directly in the browser without a server or installs. It captures examples from your webcam and fine-tunes a lightweight head on top of pretrained embeddings.
 
 ## Motivation
 
@@ -25,13 +25,12 @@ Teachable Machine is really good for showing or understanding the basics of neur
 1.	Clone or download this repo.
 2.	Open index.html in a modern browser.
 3.	Allow webcam access when prompted.
-4.	Create classes, collect samples, train, and watch predictions roll in.
+4.	Create classes, collect samples, train, and look at the predictions.
 
-> **Note:** If your browser blocks module imports from the filesystem, serve locally (e.g., python -m http.server then visit http://localhost:8000).
 
 ## How It Works
-1.	Collect Samples: For each class, snapshots are passed through MobileNet to get embeddings.
-2.	Train Head: A small dense classifier (e.g., 100-unit ReLU → softmax) is trained on those embeddings.
+1.	Collecting Samples: For each class, snapshots are passed through MobileNet to get embeddings.
+2.	Training: A small dense classifier is then trained on those embeddings.
 3.	Predict: Incoming frames are embedded and classified, updating the UI in real time.
 
 ## Roadmap / Ideas?
