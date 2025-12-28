@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadModelInput = document.getElementById('load-model-input');
     const previewPlaceholder = document.getElementById('preview-placeholder');
     const webcamElement = document.getElementById('webcam');
+    const cameraStatus = document.getElementById('camera-status');
+    const cameraFlash = document.getElementById('camera-flash');
+    const captureFeedback = document.getElementById('capture-feedback');
     const predictionResultsElement = document.getElementById('prediction-results');
     const connections = document.getElementById('connections');
     const loadingOverlay = document.getElementById('loading-overlay');
@@ -15,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let trainingData = [];
     let model;
     let mobilenet;
+    let webcamReady = false;
+    let captureFeedbackTimeout;
 
     // --- UI Management ---
 
@@ -59,16 +64,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateUIState = () => {
         const hasSamples = trainingData.length > 0;
         const modelReady = !!model;
+        const canPredict = modelReady && webcamReady;
         trainModelButton.disabled = !hasSamples;
         saveModelButton.disabled = !modelReady;
 
-        if (modelReady) {
-            previewPlaceholder.classList.add('hidden');
+        if (webcamReady) {
             webcamElement.classList.remove('hidden');
+            if (cameraStatus) {
+                cameraStatus.textContent = 'Live';
+                cameraStatus.classList.remove('off');
+            }
+        } else {
+            webcamElement.classList.add('hidden');
+            if (cameraStatus) {
+                cameraStatus.textContent = 'Camera Off';
+                cameraStatus.classList.add('off');
+            }
+        }
+
+        if (canPredict) {
+            previewPlaceholder.classList.add('hidden');
+            predictionResultsElement.classList.remove('hidden');
         } else {
             previewPlaceholder.classList.remove('hidden');
-            webcamElement.classList.add('hidden');
+            predictionResultsElement.classList.add('hidden');
+            if (!modelReady) {
+                previewPlaceholder.textContent = 'Train a model to see predictions here.';
+            } else if (!webcamReady) {
+                previewPlaceholder.textContent = 'Enable the camera to preview predictions.';
+            }
         }
+    };
+
+    const showCaptureFeedback = (message) => {
+        if (!captureFeedback) return;
+        captureFeedback.textContent = message;
+        captureFeedback.classList.remove('hidden');
+        if (captureFeedbackTimeout) {
+            clearTimeout(captureFeedbackTimeout);
+        }
+        captureFeedbackTimeout = setTimeout(() => {
+            captureFeedback.classList.add('hidden');
+            captureFeedback.textContent = '';
+        }, 1200);
+    };
+
+    const flashCamera = () => {
+        if (!cameraFlash) return;
+        cameraFlash.classList.add('flash');
+        setTimeout(() => cameraFlash.classList.remove('flash'), 120);
     };
 
     const drawConnections = () => {
@@ -153,7 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.mediaDevices.getUserMedia({ video: { width: 224, height: 224 } })
                 .then(stream => {
                     webcamElement.srcObject = stream;
-                    webcamElement.addEventListener('loadeddata', () => resolve(), false);
+                    webcamElement.addEventListener('loadeddata', () => {
+                        webcamReady = true;
+                        updateUIState();
+                        resolve();
+                    }, false);
                 })
                 .catch(err => reject(err));
         });
@@ -212,14 +260,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function predict() {
-        webcamElement.classList.remove('hidden');
-        previewPlaceholder.classList.add('hidden');
+        if (!webcamReady) {
+            updateUIState();
+            return;
+        }
         let lastPredictionTime = 0;
         const updateInterval = 333; // Approximately 3 times per second
 
         while (true) {
             const currentTime = performance.now();
-            if (model && (currentTime - lastPredictionTime > updateInterval)) {
+            if (model && webcamReady && (currentTime - lastPredictionTime > updateInterval)) {
                 const classCards = document.querySelectorAll('.class-card');
                 const classNames = Array.from(classCards).map(card => card.querySelector('input').value);
                 const image = tf.browser.fromPixels(webcamElement);
@@ -313,6 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadModelFromLocalStorage();
         } catch (err) {
             console.error("Initialization failed:", err);
+            webcamReady = false;
+            updateUIState();
             const p = loadingOverlay.querySelector('p');
             if (p) {
                 p.innerText = "Initialization failed. Please grant webcam permissions and refresh.";
@@ -332,6 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (webcamButton) {
             const card = e.target.closest('.class-card');
             const classId = card.dataset.classId;
+            const classNameInput = card.querySelector('input');
+            const className = classNameInput ? classNameInput.value : `Class ${classId}`;
+            if (!webcamReady) {
+                showCaptureFeedback('Camera is off.');
+                return;
+            }
+            flashCamera();
+            showCaptureFeedback(`Captured to ${className}.`);
             addImageSample(webcamElement, classId);
         }
 

@@ -49,11 +49,26 @@
 
                 </div>
                 <div id="preview-content">
-                    <video id="webcam" autoplay playsinline muted width="224" height="224" class="hidden"></video>
-                    <div id="preview-placeholder">
-                        You must train a model on the left before you can preview it here.
+                    <div id="camera-section">
+                        <div class="section-header">
+                            <strong>Live Camera</strong>
+                            <span id="camera-status" class="status-pill off">Camera Off</span>
+                        </div>
+                        <div id="camera-frame">
+                            <video id="webcam" autoplay playsinline muted width="224" height="224" class="hidden"></video>
+                            <div id="camera-flash"></div>
+                        </div>
+                        <div id="capture-feedback" class="hidden" role="status" aria-live="polite"></div>
                     </div>
-                    <div id="prediction-results"></div>
+                    <div id="predictions-section">
+                        <div class="section-header">
+                            <strong>Predictions</strong>
+                        </div>
+                        <div id="preview-placeholder">
+                            Train a model to see predictions here.
+                        </div>
+                        <div id="prediction-results" class="hidden"></div>
+                    </div>
                 </div>
             </div>
         </div>

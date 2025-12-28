@@ -247,8 +247,79 @@ body {
     padding: 20px;
 }
 
+#preview-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+#camera-section,
+#predictions-section {
+    width: 100%;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #3C4043;
+}
+
+.status-pill {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: #E8F0FE;
+    color: #1A73E8;
+    letter-spacing: 0.02em;
+}
+
+.status-pill.off {
+    background-color: #F1F3F4;
+    color: #5F6368;
+}
+
+#camera-frame {
+    position: relative;
+    width: 224px;
+    height: 224px;
+    margin: 0 auto;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #F1F3F4;
+    border: 1px solid #E0E0E0;
+}
+
+#camera-flash {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.85);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+#camera-flash.flash {
+    opacity: 1;
+    transition: opacity 0.05s ease;
+}
+
+#capture-feedback {
+    margin-top: 6px;
+    min-height: 16px;
+    font-size: 12px;
+    color: #1A73E8;
+    text-align: center;
+}
+
 #webcam {
-    border-radius: 4px;
+    width: 224px;
+    height: 224px;
+    object-fit: cover;
+    display: block;
 }
 
 .hidden {
